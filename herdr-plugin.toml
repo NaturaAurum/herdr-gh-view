@@ -1,0 +1,27 @@
+id = "gh-view"
+name = "GitHub PR View"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Right-side panel showing the focused worktree's PR: draft/open, stack, CI, and review comments."
+platforms = ["macos", "linux"]
+
+[[build]]
+command = ["go", "build", "-o", "herdr-gh-view", "."]
+
+[[panes]]
+id = "panel"
+title = "GitHub PR"
+placement = "split"
+command = ["./herdr-gh-view"]
+
+# Opens the panel to the right of the focused pane without stealing focus.
+# Close it with `q` inside the panel.
+[[actions]]
+id = "open"
+title = "Open GitHub PR panel"
+contexts = ["global"]
+command = [
+  "sh",
+  "-c",
+  "exec \"${HERDR_BIN_PATH:-herdr}\" plugin pane open --plugin gh-view --entrypoint panel --placement split --direction right --no-focus",
+]
