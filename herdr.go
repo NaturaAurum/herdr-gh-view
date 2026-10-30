@@ -74,6 +74,78 @@ func paneCwd(paneID string) (string, error) {
 	return resp.Result.Pane.Cwd, nil
 }
 
+// sidebarLabels are right-side panels this one stacks under.
+var sidebarLabels = map[string]bool{"AI Usage": true}
+
+type paneInfo struct {
+	PaneID      string `json:"pane_id"`
+	TabID       string `json:"tab_id"`
+	WorkspaceID string `json:"workspace_id"`
+	Label       string `json:"label"`
+}
+
+func herdrJSON(v any, args ...string) error {
+	out, err := exec.Command(herdrBin(), args...).Output()
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(out, v)
+}
+
+// sidebarIn returns the bottom-most sidebar panel of a tab, or "".
+func sidebarIn(panes []paneInfo, tabID string) string {
+	found := ""
+	for _, p := range panes {
+		if p.TabID == tabID && sidebarLabels[p.Label] {
+			found = p.PaneID
+		}
+	}
+	return found
+}
+
+// sidebarPane returns the bottom-most sidebar panel in focused's tab, or "".
+func sidebarPane(focused string) string {
+	var get struct {
+		Result struct{ Pane paneInfo } `json:"result"`
+	}
+	if herdrJSON(&get, "pane", "get", focused) != nil {
+		return ""
+	}
+	me := get.Result.Pane
+	var list struct {
+		Result struct{ Panes []paneInfo } `json:"result"`
+	}
+	if herdrJSON(&list, "pane", "list", "--workspace", me.WorkspaceID) != nil {
+		return ""
+	}
+	return sidebarIn(list.Result.Panes, me.TabID)
+}
+
+// openPanel stacks the panel under an existing sidebar panel (top/bottom
+// split), or opens it to the right of the focused pane.
+func openPanel() error {
+	var ctx struct {
+		FocusedPaneID string `json:"focused_pane_id"`
+	}
+	json.Unmarshal([]byte(os.Getenv("HERDR_PLUGIN_CONTEXT_JSON")), &ctx)
+	focused := ctx.FocusedPaneID
+	target, dir := focused, "right"
+	if focused != "" {
+		if p := sidebarPane(focused); p != "" {
+			target, dir = p, "down"
+		}
+	}
+	args := []string{"plugin", "pane", "open", "--plugin", "gh-view", "--entrypoint", "panel",
+		"--placement", "split", "--direction", dir, "--no-focus"}
+	if target != "" {
+		// The new pane's context describes --target-pane, so name the real one.
+		args = append(args, "--target-pane", target, "--env", "GH_VIEW_PANE="+focused)
+	}
+	cmd := exec.Command(herdrBin(), args...)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	return cmd.Run()
+}
+
 type rect struct{ X, Y, Width, Height int }
 
 // fitWidth shrinks the panel to cols by moving the split it sits on the right
@@ -128,6 +200,9 @@ func fitWidth(paneID string, cols int) {
 
 // initialTarget is the pane that was focused when the panel was opened.
 func initialTarget() (paneID, cwd string) {
+	if p := os.Getenv("GH_VIEW_PANE"); p != "" {
+		return p, ""
+	}
 	var ctx struct {
 		FocusedPaneID  string `json:"focused_pane_id"`
 		FocusedPaneCwd string `json:"focused_pane_cwd"`

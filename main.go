@@ -354,6 +354,13 @@ func (m *model) View() string {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "open" {
+		if err := openPanel(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	paneID, cwd := initialTarget()
 	m := &model{self: os.Getenv("HERDR_PANE_ID"), paneID: paneID, cwd: cwd}
 	if m.self != "" {
