@@ -8,7 +8,9 @@ GitHub PR for the focused pane's branch:
 - CI rollup with failing and pending checks
 - Unresolved review threads (`file:line`) and conversation comments
 
-The panel follows pane focus and refreshes every 60 seconds.
+The panel follows pane focus and refreshes every 60 seconds. If the
+[herdr-ai-usage](https://github.com/NaturaAurum/herdr-ai-usage) panel is open in
+the tab, it stacks in the same column.
 
 ## Requirements
 

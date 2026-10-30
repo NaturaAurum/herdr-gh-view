@@ -14,14 +14,11 @@ title = "GitHub PR"
 placement = "split"
 command = ["./herdr-gh-view"]
 
-# Opens the panel to the right of the focused pane without stealing focus.
+# Stacks under the AI Usage panel when it is open in this tab, otherwise opens
+# to the right of the focused pane. Neither steals focus.
 # Close it with `q` inside the panel.
 [[actions]]
 id = "open"
 title = "Open GitHub PR panel"
 contexts = ["global"]
-command = [
-  "sh",
-  "-c",
-  "exec \"${HERDR_BIN_PATH:-herdr}\" plugin pane open --plugin gh-view --entrypoint panel --placement split --direction right --no-focus",
-]
+command = ["./herdr-gh-view", "open"]
