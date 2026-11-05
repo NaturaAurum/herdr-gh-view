@@ -14,6 +14,10 @@ title = "GitHub PR"
 placement = "split"
 command = ["./herdr-gh-view"]
 
+# herdr restores plugin panes as plain shells after a restart; swap them back.
+[[startup]]
+command = ["./herdr-gh-view", "restore"]
+
 # Stacks under the AI Usage panel when it is open in this tab, otherwise opens
 # to the right of the focused pane. Neither steals focus.
 # Close it with `q` inside the panel.
