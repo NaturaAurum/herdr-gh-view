@@ -24,3 +24,17 @@ func TestInitialTargetPrefersOpenPane(t *testing.T) {
 		t.Errorf("initialTarget() = %q, %q", pane, cwd)
 	}
 }
+
+func TestContentPane(t *testing.T) {
+	panes := []paneInfo{
+		{PaneID: "p1", TabID: "t1", Label: "GitHub PR"},
+		{PaneID: "p2", TabID: "t1", Label: "AI Usage"},
+		{PaneID: "p3", TabID: "t1", Label: "zsh"},
+		{PaneID: "p4", TabID: "t2", Label: "GitHub PR"},
+	}
+	for tab, want := range map[string]string{"t1": "p3", "t2": ""} {
+		if got := contentPane(panes, tab); got != want {
+			t.Errorf("contentPane(%s) = %q, want %q", tab, got, want)
+		}
+	}
+}

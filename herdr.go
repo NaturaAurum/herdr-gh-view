@@ -135,15 +135,53 @@ func openPanel() error {
 			target, dir = p, "down"
 		}
 	}
+	return openSplit(target, dir, focused)
+}
+
+// openSplit opens a panel split off target that shows the branch of follow.
+func openSplit(target, dir, follow string) error {
 	args := []string{"plugin", "pane", "open", "--plugin", "gh-view", "--entrypoint", "panel",
 		"--placement", "split", "--direction", dir, "--no-focus"}
 	if target != "" {
 		// The new pane's context describes --target-pane, so name the real one.
-		args = append(args, "--target-pane", target, "--env", "GH_VIEW_PANE="+focused)
+		args = append(args, "--target-pane", target, "--env", "GH_VIEW_PANE="+follow)
 	}
 	cmd := exec.Command(herdrBin(), args...)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	return cmd.Run()
+}
+
+// contentPane returns the first pane of a tab that isn't a side panel, or "".
+func contentPane(panes []paneInfo, tabID string) string {
+	for _, p := range panes {
+		if p.TabID == tabID && p.Label != "GitHub PR" && !sidebarLabels[p.Label] {
+			return p.PaneID
+		}
+	}
+	return ""
+}
+
+// restorePanels runs as a [[startup]] hook. herdr brings plugin panes back
+// from a restart as plain shells that keep the "GitHub PR" label, so each one
+// is swapped for a live panel in the same spot: split it, then close it.
+func restorePanels() {
+	var list struct {
+		Result struct{ Panes []paneInfo } `json:"result"`
+	}
+	// ponytail: waits for the first pane only, assuming herdr restores the
+	// whole session at once; poll for a stable pane count if tabs go missing.
+	for range 15 {
+		if herdrJSON(&list, "pane", "list") == nil && len(list.Result.Panes) > 0 {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	panes := list.Result.Panes
+	for _, p := range panes {
+		if p.Label == "GitHub PR" && openSplit(p.PaneID, "down", contentPane(panes, p.TabID)) == nil {
+			exec.Command(herdrBin(), "pane", "close", p.PaneID).Run()
+		}
+	}
 }
 
 type rect struct{ X, Y, Width, Height int }
